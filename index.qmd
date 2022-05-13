@@ -1,30 +1,53 @@
 ---
-title: "Combining R & Obserbale with Quarto"
+title: "Combiner R & Observable avec Quarto"
+author: N. Lambert, T. Giraud
+date: "2022-05-17"
 format:
   html:
     code-tools: true
-    code-fold: true
+    code-fold: true  
+    number-sections: true
+    number-depth: 1
 ---
 
-## Data handling & analysis In R
+
+Dans ce notebook "quatro" nous allons tout d'abord préparer des données avec le logiciel R puis nous les representerons avec Observable.
+
+
+# Préparation des données et analyse avec R
+
+## Import de la couche géographique des pays du monde
+
+Nous utilisons le package `sf`, package de référence pour le traitement des données spatiales vectorielles dans R.
 
 ```{r}
+#| code-fold: false
+#| message: false
 library("sf")
 countries <- st_read("data/countries.gpkg", quiet = T)
 plot(st_geometry(countries))
 ```
 
+## Import du jeu de données
+
+Ce jeu de données contient des données de population et de PIB.
+
 ```{r}
 data <- read.csv("data/stat.csv")
 head(data)
 ```
-Merge data & geometries
+
+## Jointure entre les données et les géométries
+
+Simple jointure à partir d'un identifiant commun.
 
 ```{r}
 world = merge(countries, data, by.x = "ISO3", by.y = "id")
 ```
 
-Convert to geojson & export
+## Conversion en geojson et export
+
+Cette étape est indispensable pour pouvoir représenter les données avec observable ensuite. 
 
 ```{r}
 library(geojsonsf)
@@ -32,21 +55,33 @@ geo = sf_geojson(world)
 write(geo, "data/world.geojson")
 ```
 
-## Then, geoviz in Observable
+
+
+
+
+# Geoviz avec Observable
+
+Nous allons maintenant représenter les données avec Observable
+
+## Import des données
 
 ```{ojs}
 world = FileAttachment("data/world.geojson").json()
 ```
 
-```{ojs}
-Inputs.table(world.features.map((d) => d.properties))
-```
+<!-- ```{ojs, eval=FALSE} -->
+<!-- Inputs.table(world.features.map((d) => d.properties)) -->
+<!-- ``` -->
 
+
+## Chargement des librairies nécessaires
 ```{ojs}
 d3 = require("d3@7", "d3-geo-projection@4")
 bertin = import('https://cdn.skypack.dev/bertin@0.9.12')
 ```
 
+
+## Construction de l'interface
 ```{ojs}
 viewof val = Inputs.radio(["pop", "gdp"], {
   label: "Data to be displayed",
@@ -65,6 +100,7 @@ viewof k = Inputs.range([5, 30], {
 viewof dorling = Inputs.toggle({ label: "Avoid overlap (dorling)" })
 ```
 
+## Construction et affichage de la carte
 
 ```{ojs}
 bertin.draw({
@@ -73,7 +109,7 @@ bertin.draw({
     {
       type: "header",
       text:
-        (val == "pop" ? "World population" : "World GDP") + ` (step = ${step})`,
+        (val == "pop" ? "Population mondiale" : "PIB mondial") + ` (step = ${step})`,
       fill: "#cf429d"
     },
     {
@@ -86,10 +122,10 @@ bertin.draw({
       tooltip: [
         "$NAMEen",
         "",
-        "country value",
+        "Valeur pour le pays",
         `$${val}`,
         "",
-        "dot value",
+        "Valeur du point",
         "$___value" // ___value is the name of the computed field with the value of the point
       ],
       dorling: dorling
